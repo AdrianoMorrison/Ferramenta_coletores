@@ -1,0 +1,21 @@
+# Ignorar pastas e arquivos de build do Python
+__pycache__/
+*.pyc
+
+# Ignorar o ambiente virtual
+venv/
+.venv/
+
+# Ignorar a pasta de saída do PyInstaller
+dist/
+build/
+*.spec
+
+# Ignorar arquivos de dados do VS Code
+.vscode/
+
+# Ignorar arquivos de log
+*.log
+
+# Ignorar arquivos de sistema do macOS
+.DS_Store
