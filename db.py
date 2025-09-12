@@ -122,3 +122,7 @@ def get_totais_coletores():
 if __name__ == "__main__":
     totais_coletores = get_totais_coletores()
     print("Totais de Coletores:", totais_coletores)
+
+
+# atalho opcional para compatibilidade
+get_conn = conectar
