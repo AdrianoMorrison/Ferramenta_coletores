@@ -2,6 +2,20 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import db  # conexão com banco
+import sys  # ## AJUSTE 1: Importar a biblioteca SYS
+import os   # ## AJUSTE 2: Importar a biblioteca OS
+
+
+# ## AJUSTE 3: Adicionar esta função no início do seu script ##
+def resource_path(relative_path):
+    """ Retorna o caminho absoluto para o recurso, funcionando para DEV e para o PyInstaller """
+    try:
+        # PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
 # Função para gerar IDUsuario automaticamente
@@ -34,7 +48,7 @@ def login():
 
 
 def esqueci_senha():
-    messagebox.showinfo("Esqueci minha senha", 
+    messagebox.showinfo("Esqueci minha senha",
                         "Procure o administrador de sistemas para resetar sua senha.")
 
 
@@ -48,7 +62,6 @@ def cadastrar_usuario():
         return
 
     # Validação do e-mail corporativo
-    # Validação do e-mail corporativo
     dominios_corporativos = (
         "@gruposoma.com.br",
         "@farmrio.com.br",
@@ -57,7 +70,7 @@ def cadastrar_usuario():
         "@animale.com.br"
     )
     if not email.endswith(dominios_corporativos):
-        messagebox.showerror("Erro", f"O e-mail deve ser corporativo ({dominios_corporativos})")
+        messagebox.showerror("Erro", f"O e-mail deve ser corporativo ({', '.join(dominios_corporativos)})")
         return
 
     id_usuario = gerar_id_usuario(nome)
@@ -97,7 +110,10 @@ root.title("Sistema de Cadastro e Login")
 root.geometry("400x550")
 
 # --- Logo ---
-logo_path = r"C:\Users\adriano.soares\Desktop\python\Cadastro_coletores\assets\Logo Minimalista AZZAS.png"
+# ## AJUSTE 4: Substituir o caminho antigo pelo novo, que usa a função ##
+# O caminho relativo agora inclui a pasta 'assets'.
+logo_path = resource_path("assets/Logo Minimalista AZZAS.png")
+
 logo_img = Image.open(logo_path)
 logo_img = logo_img.resize((120, 120))
 logo_tk = ImageTk.PhotoImage(logo_img)
@@ -139,7 +155,9 @@ entry_senha_cadastro.pack(pady=5)
 tk.Button(frame_cadastro, text="Cadastrar", command=cadastrar_usuario).pack(pady=10)
 tk.Button(frame_cadastro, text="Voltar ao Login", command=mostrar_login).pack(pady=5)
 
-# Inicialmente mostra login
-frame_login.pack(pady=10)
+
+# Inicialmente mostra login, mas não o recarrega se já estiver visível
+if not frame_cadastro.winfo_ismapped():
+    frame_login.pack(pady=10)
 
 root.mainloop()
