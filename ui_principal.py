@@ -1,7 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
-import os
+import os, sys
+from PIL import Image, ImageTk
+
 
 try:
     # Pillow para garantir PNG em todas as instalações
@@ -18,16 +20,38 @@ from mov_validacoes import (
 )
 
 
+def resource_path(relative_path: str) -> str:
+    """
+    Retorna o caminho absoluto para o recurso,
+    compatível com PyInstaller (quando empacotado).
+    """
+    try:
+        # PyInstaller cria a pasta temporária _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Se rodando normal, usa a pasta do projeto
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 def _carregar_logo(widget_raiz: tk.Tk | tk.Toplevel):
     """
-    Tenta carregar a logo a partir de um caminho relativo ('assets/logo.png')
-    e, se não existir, usa o caminho absoluto informado pelo usuário.
-    Mantém a referência na janela para não ser coletada pelo GC.
+    Carrega a logo a partir de 'assets/logo.png',
+    mesmo quando rodando empacotado pelo PyInstaller.
     """
-    caminhos_tentativa = [
-        os.path.join("assets", "logo.png"),
-        r"C:\Users\adriano.soares\Desktop\python\Cadastro_coletores\assets\Logo Minimalista AZZAS.png",
-    ]
+    try:
+        logo_path = resource_path(os.path.join("assets", "logo.png"))
+        img_raw = Image.open(logo_path)
+        img_raw.thumbnail((160, 160))  # ajuste de tamanho
+        img = ImageTk.PhotoImage(img_raw)
+
+        # mantém a referência na janela
+        widget_raiz.logo_img = img
+        return img
+    except Exception as e:
+        print(f"[Aviso] Não foi possível carregar a logo: {e}")
+        return None
 
     img = None
     for caminho in caminhos_tentativa:

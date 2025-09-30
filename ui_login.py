@@ -2,23 +2,25 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import db  # conexão com banco
-import sys  # ## AJUSTE 1: Importar a biblioteca SYS
-import os   # ## AJUSTE 2: Importar a biblioteca OS
+import sys
+import os
 
 
-# ## AJUSTE 3: Adicionar esta função no início do seu script ##
-def resource_path(relative_path):
-    """ Retorna o caminho absoluto para o recurso, funcionando para DEV e para o PyInstaller """
+# -------------------------------
+# Util: localizar recursos (PyInstaller friendly)
+# -------------------------------
+def resource_path(relative_path: str) -> str:
+    """Retorna o caminho absoluto para o recurso, funcionando no DEV e no executável do PyInstaller."""
     try:
-        # PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
-        base_path = sys._MEIPASS
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
     except Exception:
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
 
 
-# Função para gerar IDUsuario automaticamente
+# -------------------------------
+# Helpers
+# -------------------------------
 def gerar_id_usuario(nome_completo):
     nome_completo = nome_completo.upper().strip()
     partes = nome_completo.split()
@@ -29,7 +31,9 @@ def gerar_id_usuario(nome_completo):
     return f"{primeiro}.{ultimo}"
 
 
-# --- Ações ---
+# -------------------------------
+# Ações
+# -------------------------------
 def login():
     usuario = entry_usuario.get().strip()
     senha = entry_senha.get().strip()
@@ -42,7 +46,6 @@ def login():
         root.withdraw()  # esconde a janela de login
         import ui_principal
         ui_principal.abrir_ui_principal(usuario)
-
     else:
         messagebox.showerror("Erro", "Usuário ou senha inválidos!")
 
@@ -61,13 +64,12 @@ def cadastrar_usuario():
         messagebox.showerror("Erro", "Preencha todos os campos!")
         return
 
-    # Validação do e-mail corporativo
     dominios_corporativos = (
         "@gruposoma.com.br",
         "@farmrio.com.br",
         "@somagrupo.com.br",
         "@azzas2154.com.br",
-        "@animale.com.br"
+        "@animale.com.br",
     )
     if not email.endswith(dominios_corporativos):
         messagebox.showerror("Erro", f"O e-mail deve ser corporativo ({', '.join(dominios_corporativos)})")
@@ -88,12 +90,14 @@ def cadastrar_usuario():
         entry_nome.delete(0, tk.END)
         entry_email.delete(0, tk.END)
         entry_senha_cadastro.delete(0, tk.END)
-        mostrar_login()  # volta para tela de login
+        mostrar_login()
     except Exception as e:
         messagebox.showerror("Erro", f"Falha ao cadastrar: {e}")
 
 
-# --- Alternar telas ---
+# -------------------------------
+# Alternar telas
+# -------------------------------
 def mostrar_login():
     frame_cadastro.pack_forget()
     frame_login.pack(pady=10)
@@ -104,22 +108,38 @@ def mostrar_cadastro():
     frame_cadastro.pack(pady=10)
 
 
-# --- Janela principal ---
+# -------------------------------
+# Janela principal
+# -------------------------------
 root = tk.Tk()
 root.title("Sistema de Cadastro e Login")
 root.geometry("400x550")
 
-# --- Logo ---
-# ## AJUSTE 4: Substituir o caminho antigo pelo novo, que usa a função ##
-# O caminho relativo agora inclui a pasta 'assets'.
-logo_path = resource_path("assets/Logo Minimalista AZZAS.png")
+# (Opcional) definir ícone da janela, se tiver um .ico
+# try:
+#     icon_path = resource_path(os.path.join("assets", "app.ico"))
+#     if os.path.exists(icon_path):
+#         root.iconbitmap(icon_path)
+# except Exception:
+#     pass
 
-logo_img = Image.open(logo_path)
-logo_img = logo_img.resize((120, 120))
-logo_tk = ImageTk.PhotoImage(logo_img)
-tk.Label(root, image=logo_tk).pack(pady=10)
+# -------------------------------
+# Logo (agora pega da pasta assets)
+# -------------------------------
+try:
+    logo_path = resource_path(os.path.join("assets", "logo.png"))
+    logo_img = Image.open(logo_path)
+    logo_img = logo_img.resize((120, 120))
+    root.logo_tk = ImageTk.PhotoImage(logo_img)  # manter referência
+    tk.Label(root, image=root.logo_tk).pack(pady=10)
+except Exception as e:
+    # Se der erro, segue sem travar
+    print(f"[Aviso] Não foi possível carregar a logo: {e}")
+    tk.Label(root, text="").pack(pady=10)
 
-# --- Frame Login ---
+# -------------------------------
+# Frame Login
+# -------------------------------
 frame_login = tk.Frame(root)
 
 tk.Label(frame_login, text="Usuário:").pack(pady=5)
@@ -136,8 +156,9 @@ tk.Button(frame_login, text="Cadastrar novo usuário", command=mostrar_cadastro)
 
 frame_login.pack(pady=10)
 
-
-# --- Frame Cadastro ---
+# -------------------------------
+# Frame Cadastro
+# -------------------------------
 frame_cadastro = tk.Frame(root)
 
 tk.Label(frame_cadastro, text="Nome completo:").pack(pady=5)
@@ -155,8 +176,7 @@ entry_senha_cadastro.pack(pady=5)
 tk.Button(frame_cadastro, text="Cadastrar", command=cadastrar_usuario).pack(pady=10)
 tk.Button(frame_cadastro, text="Voltar ao Login", command=mostrar_login).pack(pady=5)
 
-
-# Inicialmente mostra login, mas não o recarrega se já estiver visível
+# Inicial: mostra login
 if not frame_cadastro.winfo_ismapped():
     frame_login.pack(pady=10)
 
