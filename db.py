@@ -107,7 +107,7 @@ def get_totais_coletores() -> Dict[str, int]:
     Executa a consulta de totais dos coletores.
     Retorna um dicionário com 'EM OPERACAO', 'DISPONIVEL', 'EM CONSERTO'.
     """
-    totais = {"EM OPERACAO": 0, "DISPONIVEL": 0, "EM CONSERTO": 0}
+    totais = {"EM OPERACAO": 0, "DISPONIVEL": 0, "EM CONSERTO": 0, "EXTRAVIADO": 0, "INATIVO": 0 }
     sql_query = """
         SELECT
             COUNT(DISTINCT LTRIM(RTRIM(A.IDcoletores))) AS QTColetores,

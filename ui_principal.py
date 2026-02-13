@@ -1,6 +1,16 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
+import os, sys
+from PIL import Image, ImageTk
+
+
+try:
+    # Pillow para garantir PNG em todas as instalações
+    from PIL import Image, ImageTk
+    _PIL_OK = True
+except Exception:
+    _PIL_OK = False
 
 from db import get_totais_coletores
 from mov_validacoes import (
@@ -10,13 +20,70 @@ from mov_validacoes import (
 )
 
 
+def resource_path(relative_path: str) -> str:
+    """
+    Retorna o caminho absoluto para o recurso,
+    compatível com PyInstaller (quando empacotado).
+    """
+    try:
+        # PyInstaller cria a pasta temporária _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Se rodando normal, usa a pasta do projeto
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
+def _carregar_logo(widget_raiz: tk.Tk | tk.Toplevel):
+    """
+    Carrega a logo a partir de 'assets/logo.png',
+    mesmo quando rodando empacotado pelo PyInstaller.
+    """
+    try:
+        logo_path = resource_path(os.path.join("assets", "logo.png"))
+        img_raw = Image.open(logo_path)
+        img_raw.thumbnail((160, 160))  # ajuste de tamanho
+        img = ImageTk.PhotoImage(img_raw)
+
+        # mantém a referência na janela
+        widget_raiz.logo_img = img
+        return img
+    except Exception as e:
+        print(f"[Aviso] Não foi possível carregar a logo: {e}")
+        return None
+
+    img = None
+    for caminho in caminhos_tentativa:
+        if os.path.exists(caminho):
+            try:
+                if _PIL_OK:
+                    img_raw = Image.open(caminho)
+                    # Ajuste sutil no tamanho para caber no topo
+                    # (altere conforme necessário)
+                    img_raw.thumbnail((160, 160))
+                    img = ImageTk.PhotoImage(img_raw)
+                else:
+                    # Tk 8.6+ costuma suportar PNG; se não suportar, peça Pillow
+                    img = tk.PhotoImage(file=caminho)
+                break
+            except Exception:
+                continue
+
+    if img is not None:
+        widget_raiz.logo_img = img  # manter referência
+        return img
+    else:
+        return None
+
+
 def abrir_ui_principal(usuario_logado: str):
     """
     Interface principal de controle de coletores WMS.
     """
     janela = tk.Toplevel()
     janela.title("Controle Coletores WMS")
-    janela.geometry("1000x600")
+    janela.geometry("1100x640")
     janela.resizable(False, False)
 
     # -------------------------
@@ -29,9 +96,21 @@ def abrir_ui_principal(usuario_logado: str):
     # -------------------------
     def carregar_totais():
         totais = get_totais_coletores()
-        lbl_em_operacao.config(text=str(totais.get("EM OPERACAO", 0)))
-        lbl_disponiveis.config(text=str(totais.get("DISPONIVEL", 0)))
-        lbl_conserto.config(text=str(totais.get("EM CONSERTO", 0)))
+        # chaves esperadas do backend
+        em_operacao = int(totais.get("EM OPERACAO", 0))
+        disponiveis = int(totais.get("DISPONIVEL", 0))
+        em_conserto = int(totais.get("EM CONSERTO", 0))
+        extraviado = int(totais.get("EXTRAVIADO", 0))
+        inativo = int(totais.get("INATIVO", 0))
+
+        soma_geral = em_operacao + disponiveis + em_conserto + extraviado + inativo
+
+        lbl_em_operacao.config(text=str(em_operacao))
+        lbl_disponiveis.config(text=str(disponiveis))
+        lbl_conserto.config(text=str(em_conserto))
+        lbl_extraviado.config(text=str(extraviado))
+        lbl_inativo.config(text=str(inativo))
+        lbl_totais.config(text=str(soma_geral))
 
     def atualizar_ui(*_):
         acao = acao_var.get()
@@ -154,24 +233,55 @@ def abrir_ui_principal(usuario_logado: str):
     # -------------------------
     # Layout
     # -------------------------
-    tk.Label(janela, text="Controle Coletores WMS", font=("Arial", 18, "bold")).pack(pady=12)
 
+    # Cabeçalho com título à esquerda e logo à direita
+    header = tk.Frame(janela)
+    header.pack(fill="x", padx=10, pady=(10, 0))
+
+    tk.Label(header, text="Controle Coletores WMS", font=("Arial", 18, "bold")).pack(side="left")
+
+    logo_img = _carregar_logo(janela)
+    if logo_img is not None:
+        tk.Label(header, image=logo_img).pack(side="right", padx=6)
+    else:
+        # fallback discreto se a imagem não carregar
+        tk.Label(header, text="").pack(side="right")
+
+    # Linha com totais
     frame_top = tk.Frame(janela)
-    frame_top.pack(fill="x", padx=10, pady=5)
+    frame_top.pack(fill="x", padx=10, pady=8)
 
-    tk.Label(frame_top, text="Em operação", fg="blue", font=("Arial", 10, "bold")).grid(row=0, column=0, padx=20)
+    # Em operação
+    tk.Label(frame_top, text="Em operação", fg="blue", font=("Arial", 10, "bold")).grid(row=0, column=0, padx=16)
     lbl_em_operacao = tk.Label(frame_top, text="0", font=("Arial", 16))
     lbl_em_operacao.grid(row=1, column=0)
 
-    tk.Label(frame_top, text="Disponíveis", fg="green", font=("Arial", 10, "bold")).grid(row=0, column=1, padx=20)
+    # Disponíveis
+    tk.Label(frame_top, text="Disponíveis", fg="green", font=("Arial", 10, "bold")).grid(row=0, column=1, padx=16)
     lbl_disponiveis = tk.Label(frame_top, text="0", font=("Arial", 16))
     lbl_disponiveis.grid(row=1, column=1)
 
-    tk.Label(frame_top, text="Enviado para Conserto", fg="red", font=("Arial", 10, "bold")).grid(row=0, column=2, padx=20)
+    # Enviado p/ Conserto
+    tk.Label(frame_top, text="Enviado para Conserto", fg="red", font=("Arial", 10, "bold")).grid(row=0, column=2, padx=16)
     lbl_conserto = tk.Label(frame_top, text="0", font=("Arial", 16))
     lbl_conserto.grid(row=1, column=2)
 
-    ttk.Button(frame_top, text="Atualizar Totais", command=carregar_totais).grid(row=1, column=3, padx=20)
+    # Extraviado
+    tk.Label(frame_top, text="Extraviados", fg="orange", font=("Arial", 10, "bold")).grid(row=0, column=3, padx=16)
+    lbl_extraviado = tk.Label(frame_top, text="0", font=("Arial", 16))
+    lbl_extraviado.grid(row=1, column=3)
+
+    # Inativo
+    tk.Label(frame_top, text="Inativos", fg="purple", font=("Arial", 10, "bold")).grid(row=0, column=4, padx=16)
+    lbl_inativo = tk.Label(frame_top, text="0", font=("Arial", 16))
+    lbl_inativo.grid(row=1, column=4)
+
+    # Totais (soma geral)
+    tk.Label(frame_top, text="Totais", fg="black", font=("Arial", 10, "bold")).grid(row=0, column=5, padx=16)
+    lbl_totais = tk.Label(frame_top, text="0", font=("Arial", 16))
+    lbl_totais.grid(row=1, column=5)
+
+    ttk.Button(frame_top, text="Atualizar Totais", command=carregar_totais).grid(row=1, column=6, padx=20)
 
     # Ações
     frame_acoes = tk.LabelFrame(janela, text="Escolha uma ação")
